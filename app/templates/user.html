@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python学习助手:个人信息</title>
+
+    <!-- CSS文件 -->
+    <link rel="stylesheet" href="../static/css/main.css">
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/element-plus.css">
+    <link rel="stylesheet" href="../static/css/codemirror.css">
+    <link rel="stylesheet" href="../static/css/header.css">
+    <link rel="stylesheet" href="../static/css/user.css">
+
+    <!-- Vue 3 -->
+    <script src="../static/js/vue.global.js"></script>
+
+    <!-- Element Plus -->
+    <script src="../static/js/element-plus.global.js"></script>
+
+    <!-- Axios -->
+    <script src="../static/js/axios.min.js"></script>
+
+    <!-- CodeMirror -->
+    <script src="../static/js/codemirror.min.js"></script>
+
+    <!-- StackEdit -->
+    <script src="https://unpkg.com/stackedit-js@1.0.7/docs/lib/stackedit.min.js"></script>
+
+    <script src="../static/js/user/user.js"></script>
+
+
+</head>
+
+
+<body>
+    <div id="app">
+        <!-- 页面顶部导航栏 -->
+        <div class="header">
+            <div class="nav-container">
+                <div class="logo">Python学习助手</div>
+                <el-menu mode="horizontal" :default-active="currentPage" class="nav-menu">
+                    <el-menu-item index="/homepage" @click="navigateTo('/homepage')">
+                        <el-icon><el-icon-house /></el-icon>主页
+                    </el-menu-item>
+                    <el-menu-item index="/learn" @click="navigateTo('/learn')">
+                        <el-icon><el-icon-reading /></el-icon>学习
+                    </el-menu-item>
+                    <el-menu-item index="/note" @click="navigateTo('/note')">
+                        <el-icon><el-icon-notebook /></el-icon>笔记
+                    </el-menu-item>
+                    <el-menu-item index="/code" @click="navigateTo('/code')">
+                        <el-icon><el-icon-terminal /></el-icon>代码
+                    </el-menu-item>
+                    <el-menu-item index="/user" @click="navigateTo('/user')">
+                        <el-icon><el-icon-user /></el-icon>个人
+                    </el-menu-item>
+                </el-menu>
+            </div>
+        </div>
+
+        <!-- 页面内容容器 -->
+        <div class="content-container">
+            <el-container class="user-container">
+                <!-- 左侧导航菜单 -->
+                <el-aside width="200px" class="user-aside">
+                    <el-menu class="user-menu" :default-active="activeMenu" @select="handleMenuSelect">
+                        <el-menu-item index="profile">
+                            <el-icon><el-icon-user /></el-icon>
+                            <span>个人信息</span>
+                        </el-menu-item>
+                        <el-menu-item index="survey">
+                            <el-icon><el-icon-message /></el-icon>
+                            <span>调查问卷</span>
+                        </el-menu-item>
+                        <el-menu-item index="password">
+                            <el-icon><el-icon-lock /></el-icon>
+                            <span>修改密码</span>
+                        </el-menu-item>
+                        <el-menu-item index="feedback">
+                            <el-icon><el-icon-chat-dot-round /></el-icon>
+                            <span>使用反馈</span>
+                        </el-menu-item>
+                    </el-menu>
+                </el-aside>
+
+                <!-- 右侧内容区 -->
+                <el-main class="user-main">
+                    <!-- 个人信息面板 -->
+                    <div v-show="activeMenu === 'profile'" class="user-panel">
+                        <h3>个人信息</h3>
+                        <el-card shadow="hover" class="profile-card">
+                            <el-form :model="userInfo" label-width="80px">
+                                {% raw %}
+                                <el-form-item label="用户ID">
+                                    <span>{{ userInfo.uid }}</span>
+                                </el-form-item>
+                                {% endraw %}
+                                <el-form-item label="昵称">
+                                    <el-input v-model="userInfo.nickname" placeholder="请输入昵称"></el-input>
+                                </el-form-item>
+                                {% raw %}
+                                <el-form-item label="注册时间">
+                                    <span>{{ userInfo.signuptime }}</span>
+                                </el-form-item>
+                                {% endraw %}
+                                <el-form-item>
+                                    <el-button type="primary" @click="updateProfile">保存修改</el-button>
+                                </el-form-item>
+                            </el-form>
+                        </el-card>
+                    </div>
+
+                    <!-- 调查问卷面板 -->
+                    <div v-show="activeMenu === 'survey'" class="user-panel">
+                        <h3>调查问卷</h3>
+                        <el-card shadow="hover" class="survey-card">
+                            <el-form :model="surveyForm" label-width="120px">
+                                <el-form-item label="Python经验">
+                                    <el-select v-model="surveyForm.experience" placeholder="请选择您的Python经验">
+                                        <el-option label="从未使用过" value="不了解"></el-option>
+                                        <el-option label="初学者（不到1年）" value="初学者"></el-option>
+                                        <el-option label="中级（1-3年）" value="有一定基础"></el-option>
+                                        <el-option label="高级（3年以上）" value="精通"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                        
+                                <!-- 其他编程语言经验 -->
+                                <el-form-item label="其他编程语言">
+                                    <el-checkbox-group v-model="surveyForm.otherLanguages">
+                                        <el-checkbox label="javascript">JavaScript</el-checkbox>
+                                        <el-checkbox label="java">Java</el-checkbox>
+                                        <el-checkbox label="csharp">C#</el-checkbox>
+                                        <el-checkbox label="cpp">C/C++</el-checkbox>
+                                        <el-checkbox label="php">PHP</el-checkbox>
+                                        <el-checkbox label="go">Go</el-checkbox>
+                                        <el-checkbox label="ruby">Ruby</el-checkbox>
+                                        <el-checkbox label="无经验">无其他编程经验</el-checkbox>
+                                    </el-checkbox-group>
+                                </el-form-item>
+                                
+                                <!-- 编程总经验 -->
+                                <el-form-item label="编程总经验">
+                                    <el-radio-group v-model="surveyForm.programmingExperience">
+                                        <el-radio label="无编程经验">无经验</el-radio>
+                                        <el-radio label="初学者">初学者（不到1年）</el-radio>
+                                        <el-radio label="有一定基础">中级（1-3年）</el-radio>
+                                        <el-radio label="熟练">高级（3-5年）</el-radio>
+                                        <el-radio label="精通">专家（5年以上）</el-radio>
+                                    </el-radio-group>
+                                </el-form-item>
+                        
+                                <!-- 用户身份 -->
+                                <el-form-item label="您的身份">
+                                    <el-select v-model="surveyForm.identity" placeholder="请选择您的身份">
+                                        <el-option label="在校学生" value="学生"></el-option>
+                                        <el-option label="IT从业者" value="IT从业者"></el-option>
+                                        <el-option label="非IT企业职员" value="非IT企业职员"></el-option>
+                                        <el-option label="自由职业者" value="自由职业者"></el-option>
+                                        <el-option label="教育工作者" value="教育工作者"></el-option>
+                                        <el-option label="研究人员" value="研究人员"></el-option>
+                                        <el-option label="其他" value="其他r"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="学习目标">
+                                    <el-checkbox-group v-model="surveyForm.goals">
+                                        <el-checkbox label="Web开发">Web开发</el-checkbox>
+                                        <el-checkbox label="数据分析">数据分析</el-checkbox>
+                                        <el-checkbox label="人工智能/机器学习">人工智能/机器学习</el-checkbox>
+                                        <el-checkbox label="自动化脚本">自动化脚本</el-checkbox>
+                                        <el-checkbox label="后端服务开发">后端服务开发</el-checkbox>
+                                        <el-checkbox label="移动应用开发">移动应用开发</el-checkbox>
+                                        <el-checkbox label="桌面应用开发">桌面应用开发</el-checkbox>
+                                        <el-checkbox label="其他">其他</el-checkbox>
+                                    </el-checkbox-group>
+                                </el-form-item>
+                                <el-form-item>
+                                    <el-button type="primary" @click="submitSurvey">提交问卷</el-button>
+                                </el-form-item>
+                            </el-form>
+                        </el-card>
+                    </div>
+
+                    <!-- 修改密码面板 -->
+                    <div v-show="activeMenu === 'password'" class="user-panel">
+                        <h3>修改密码</h3>
+                        <el-card shadow="hover" class="password-card">
+                            <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef"
+                                label-width="100px">
+                                <el-form-item label="当前密码" prop="oldPassword">
+                                    <el-input v-model="passwordForm.oldPassword" type="password"
+                                        show-password></el-input>
+                                </el-form-item>
+                                <el-form-item label="新密码" prop="newPassword">
+                                    <el-input v-model="passwordForm.newPassword" type="password"
+                                        show-password></el-input>
+                                </el-form-item>
+                                <el-form-item label="确认新密码" prop="confirmPassword">
+                                    <el-input v-model="passwordForm.confirmPassword" type="password"
+                                        show-password></el-input>
+                                </el-form-item>
+                                <el-form-item>
+                                    <el-button type="primary" @click="updatePassword">修改密码</el-button>
+                                    <el-button @click="resetPasswordForm">重置</el-button>
+                                </el-form-item>
+                            </el-form>
+                        </el-card>
+                    </div>
+
+                    <!-- 使用反馈面板 -->
+                    <div v-show="activeMenu === 'feedback'" class="user-panel">
+                        <h3>使用反馈</h3>
+                        <el-card shadow="hover" class="feedback-card">
+                            <el-form :model="feedbackForm" :rules="feedbackRules" ref="feedbackFormRef"
+                                label-width="80px">
+                                <el-form-item label="标题" prop="title">
+                                    <el-input v-model="feedbackForm.title" placeholder="请输入反馈标题"></el-input>
+                                </el-form-item>
+                                <el-form-item label="内容" prop="content">
+                                    <el-input type="textarea" v-model="feedbackForm.content" rows="6"
+                                        placeholder="请详细描述您的反馈或建议">
+                                    </el-input>
+                                </el-form-item>
+                                <el-form-item>
+                                    <el-button type="primary" @click="submitFeedback">提交反馈</el-button>
+                                    <el-button @click="resetFeedbackForm">重置</el-button>
+                                </el-form-item>
+                            </el-form>
+                        </el-card>
+
+                        <!-- 历史反馈列表 -->
+                        <el-card v-if="feedbackList.length > 0" class="history-feedback-card" style="margin-top: 20px;">
+                            <template #header>
+                                <div class="card-header">
+                                    <span>历史反馈</span>
+                                </div>
+                            </template>
+                            {% raw %}
+                            <el-table :data="feedbackList" style="width: 100%">
+                                <el-table-column label="标题">
+                                    <template #default="{ row }">
+                                        {{ row.title }}
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="提交时间" width="180">
+                                    <template #default="{ row }">
+                                        {{ row.creattime }}
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="状态" width="100">
+                                    <template #default="{ row }">
+                                        <el-tag :type="row.state === 0 ? 'info' : 'success'">
+                                            {{ row.state === 0 ? '待处理' : '已处理' }}
+                                        </el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="操作">
+                                    <template #default="{ row }">
+                                        <el-button type="text" @click="viewFeedbackDetail(row)">查看详情</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                            {% endraw %}
+                        </el-card>
+                    </div>
+                </el-main>
+            </el-container>
+
+        </div>
+
+    </div>
+
+    <!-- 库检查脚本 -->
+    <script src="../static/js/check-libraries.js"></script>
+
+    <!-- 初始化Vue应用 -->
+
+</body>
+
+</html>

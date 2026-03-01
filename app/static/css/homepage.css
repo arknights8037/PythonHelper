@@ -1,0 +1,266 @@
+/* 主页布局 */
+.homepage-layout {
+    display: flex;
+    min-height: calc(100vh - 60px); /* 减去导航栏高度 */
+    background-color: #f5f7fa;
+}
+
+/* 侧边栏样式 */
+.sidebar {
+    width: 280px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: sticky;
+    top: 60px; /* 导航栏高度 */
+    height: calc(100vh - 60px);
+}
+
+.sidebar-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-card h3 {
+    margin-top: 0;
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* 快速链接样式 */
+.quick-links ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.quick-links li {
+    margin-bottom: 8px;
+}
+
+.quick-links .el-button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-start;
+    padding: 8px;
+}
+
+.quick-links .el-icon {
+    margin-right: 8px;
+}
+
+/* 下载按钮样式 */
+.download-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.download-buttons .el-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 主内容区样式 */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* 解决flex布局下溢出问题 */
+}
+
+/* 分段控制器样式 */
+.el-segmented-control {
+    display: flex;
+    background-color: #ebeef5;
+    border-radius: 4px;
+    overflow: hidden;
+    width: fit-content;
+}
+
+.el-segmented-control-option {
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 14px;
+}
+
+.el-segmented-control-option:hover {
+    background-color: rgba(64, 158, 255, 0.1);
+}
+
+.el-segmented-control-option.is-active {
+    background-color: #409eff;
+    color: white;
+}
+
+/* 帖子控制器样式 */
+.post-controller {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    background-color: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+.filter-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 帖子容器样式 */
+.posts-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1px 0; /* 防止margin塌陷 */
+}
+
+.posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.post-item {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.post-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #303133;
+}
+
+.post-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #909399;
+    font-size: 14px;
+}
+
+.post-content {
+    margin: 16px 0;
+    color: #606266;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+.post-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    color: #909399;
+}
+
+/* 加载更多和没有更多提示 */
+.loading-more, .no-more {
+    text-align: center;
+    padding: 20px 0;
+    color: #909399;
+    font-size: 14px;
+}
+
+.loading-icon {
+    animation: rotate 1s linear infinite;
+    margin-right: 6px;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.rotating {
+    animation: rotate 1s linear infinite;
+}
+
+/* 占位内容样式 */
+.stats-placeholder, .hot-topics-placeholder {
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #909399;
+    background-color: #f5f7fa;
+    border-radius: 4px;
+}
+
+/* 热力图样式 */
+.learn-stats {
+    padding: 10px 0;
+}
+
+.heatmap-container {
+    font-size: 12px;
+}
+
+.heatmap-title {
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.heatmap-legend {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 11px;
+    color: #666;
+}
+
+.heatmap-colors {
+    display: flex;
+    margin: 0 5px;
+}
+
+.heatmap-color {
+    width: 10px;
+    height: 10px;
+    margin-right: 1px;
+}
+
+.heatmap-grid {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.heatmap-week {
+    display: flex;
+    flex-direction: column;
+    margin-right: 2px;
+}
+
+.heatmap-day {
+    width: 10px;
+    height: 10px;
+    margin-bottom: 2px;
+    border-radius: 2px;
+    background-color: #ebedf0;
+    cursor: default;
+}
+
+.loading-stats, .stats-error {
+    padding: 15px 0;
+}

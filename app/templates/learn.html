@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python学习助手:学习</title>
+    <link rel="stylesheet" href="../static/css/main.css">
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/element-plus.css">
+    <link rel="stylesheet" href="../static/css/header.css">
+    <link rel="stylesheet" href="../static/css/learn.css">
+    <link rel="stylesheet" href="../static/css/markdown.css">
+    <script src="../static/js/vue.global.js"></script>
+    <script src="../static/js/element-plus.global.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+    <script src="../static/js/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.js"></script>
+    <script src="https://unpkg.com/stackedit-js@1.0.7/docs/lib/stackedit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+
+</head>
+
+<body>
+    <div id="app">
+        <!-- header部分不要动 -->
+        <div class="header">
+            <div class="nav-container">
+                <div class="logo">Python学习助手</div>
+                <el-menu mode="horizontal" :default-active="currentPage" router class="nav-menu">
+                    <el-menu-item index="/homepage" @click="navigateTo('/homepage')">
+                        <el-icon><el-icon-house /></el-icon>主页
+                    </el-menu-item>
+                    <el-menu-item index="/learn" @click="navigateTo('/learn')">
+                        <el-icon><el-icon-reading /></el-icon>学习
+                    </el-menu-item>
+                    <el-menu-item index="/note" @click="navigateTo('/note')">
+                        <el-icon><el-icon-notebook /></el-icon>笔记
+                    </el-menu-item>
+                    <el-menu-item index="/code" @click="navigateTo('/code')">
+                        <el-icon><el-icon-terminal /></el-icon>代码
+                    </el-menu-item>
+                    <el-menu-item index="/user" @click="navigateTo('/user')">
+                        <el-icon><el-icon-user /></el-icon>个人
+                    </el-menu-item>
+                </el-menu>
+            </div>
+        </div>
+        <!-- 主体内容 -->
+        <div class="learn-main">
+            <!-- 左侧菜单区 -->
+            {% raw %}
+            <div class="learn-sidebar">
+                <div class="sidebar-header">
+                    <el-button :type="isRoot ? 'default' : 'primary'" :disabled="isRoot" icon="Back" size="small"
+                        @click="handleBack" class="sidebar-back" link>返回</el-button>
+                    <span class="sidebar-breadcrumb">
+                        <template v-for="(item, idx) in menuStack">
+                            <span v-if="idx > 0" class="breadcrumb-sep">/</span>
+                            <span>{{ item.label }}</span>
+                        </template>
+                    </span>
+                </div>
+                <el-menu class="sidebar-menu" :default-active="''" :router="false" :unique-opened="true"
+                    :collapse="false" :background-color="'#fff'" :text-color="'#222'" :active-text-color="'#1890ff'"
+                    style="border:none;">
+                    <!-- 一级菜单 -->
+                    <template v-if="menuStack.length === 1">
+                        <el-menu-item v-for="menuItem in currentMenu" :key="menuItem.value" :index="menuItem.value"
+                            @click="handleMenuClick(menuItem)">
+                            {{ menuItem.label }}
+                        </el-menu-item>
+                    </template>
+                    <!-- 二级菜单及三级 -->
+                    <template v-else>
+                        <template v-for="menuItem in currentMenu" :key="menuItem.value">
+                            <!-- 有子菜单的项目 -->
+                            <el-sub-menu v-if="menuItem.children" :index="menuItem.value"
+                                :key="menuItem.value + '-submenu'">
+                                <template #title>{{ menuItem.label }}</template>
+                                <el-menu-item v-for="leaf in menuItem.children" :key="leaf.value" :index="leaf.value"
+                                    @click="handleMenuClick(leaf)"
+                                    :class="{ 'is-selected': selectedTags.includes(leaf.value) }">
+                                    {{ leaf.label }}
+                                </el-menu-item>
+                            </el-sub-menu>
+                            <!-- 没有子菜单的项目 -->
+                            <el-menu-item v-else :key="menuItem.value + '-item'" :index="menuItem.value"
+                                @click="handleMenuClick(menuItem)"
+                                :class="{ 'is-selected': selectedTags.includes(menuItem.value) }">
+                                {{ menuItem.label }}
+                            </el-menu-item>
+                        </template>
+                    </template>
+                </el-menu>
+            </div>
+            {% endraw %}
+            <!-- 右侧内容区 -->
+            <div class="learn-content">
+                <div class="learn-content-header">
+                    <el-tabs v-model="activeTab" class="learn-tabs" @tab-change="handleTabChange">
+                        <el-tab-pane label="学习" name="learn"></el-tab-pane>
+                        <el-tab-pane label="问答" name="qa"></el-tab-pane>
+                    </el-tabs>
+                    <div class="learn-current-tag">
+                        当前选择知识点：
+                        {% raw %}
+                        <template v-if="selectedTags.length">
+                            <el-tag v-for="tag in selectedTags" :key="tag" type="primary" closable
+                                @close="removeTag(tag)" style="margin-right: 6px;">{{ tag }}</el-tag>
+                        </template>
+                        {% endraw %}
+                        <span v-else style="color:#bbb;">未选择</span>
+                    </div>
+                    <div class="learn-actions">
+                        <el-button :type="activeTab==='learn'?'primary':'default'" @click="startLearning"
+                            size="small">开始学习</el-button>
+                        <el-button :type="activeTab==='qa'?'primary':'default'" @click="startQA"
+                            size="small">开始问答</el-button>
+                    </div>
+                </div>
+                <div class="learn-content-body">
+                    <el-row :gutter="20">
+                        <!-- 左侧步骤条区域 (4) -->
+                        <el-col :span="4">
+                            <div class="learn-steps-container">
+                                <el-steps direction="vertical" :active="activeStep" class="centered-steps">
+                                    <el-step title="确认教学方案" :status="promptStatus">
+                                        <template #icon>
+                                            <el-icon :class="{'is-rotating': promptStatus === 'process'}">
+                                                <Document v-if="promptStatus === 'wait'" />
+                                                <Loading v-else-if="promptStatus === 'process'" />
+                                                <Check v-else />
+                                            </el-icon>
+                                        </template>
+                                    </el-step>
+                                    <el-step title="学习内容生成" :status="learningStatus">
+                                        <template #icon>
+                                            <el-icon :class="{'is-rotating': learningStatus === 'process'}">
+                                                <Edit v-if="learningStatus === 'wait'" />
+                                                <Loading v-else-if="learningStatus === 'process'" />
+                                                <Check v-else />
+                                            </el-icon>
+                                        </template>
+                                    </el-step>
+                                    <el-step title="交互式问答" :status="qaStatus">
+                                        <template #icon>
+                                            <el-icon :class="{'is-rotating': qaStatus === 'process'}">
+                                                <svg v-if="qaStatus === 'wait'" xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 1024 1024">
+                                                    <path fill="currentColor"
+                                                        d="m174.72 855.68 135.296-45.12 23.68 11.84C388.096 849.536 448.576 864 512 864c211.84 0 384-166.784 384-352S723.84 160 512 160 128 326.784 128 512c0 69.12 24.96 139.264 70.848 199.232l22.08 28.8-46.272 115.584zm-45.248 82.56A32 32 0 0 1 89.6 896l58.368-145.92C94.72 680.32 64 596.864 64 512 64 299.904 256 96 512 96s448 203.904 448 416-192 416-448 416a461.056 461.056 0 0 1-206.912-48.384l-175.616 58.56z">
+                                                    </path>
+                                                    <path fill="currentColor"
+                                                        d="M352 576h320q32 0 32 32t-32 32H352q-32 0-32-32t32-32m32-192h256q32 0 32 32t-32 32H384q-32 0-32-32t32-32">
+                                                    </path>
+                                                </svg>
+                                                <Loading v-else-if="qaStatus === 'process'" />
+                                                <Check v-else />
+                                            </el-icon>
+                                        </template>
+                                    </el-step>
+                                </el-steps>
+                            </div>
+                        </el-col>
+
+                        <!-- 中间聊天区域 (16) -->
+                        <el-col :span="16">
+                            <div class="chat-area">
+                                <!-- 消息列表区域 -->
+                                <div class="custom-bubble-list" ref="messageContainer">
+                                    <div v-for="item in activeTab === 'learn' ? learningContent : qaContent"
+                                        :key="item.id" class="custom-bubble-wrapper"
+                                        :class="{'custom-bubble-user': item.type === 'user', 'custom-bubble-ai': item.type === 'ai'}">
+                                        <div class="custom-bubble-avatar">
+                                            <img :src="item.type === 'user' ? userAvatar : aiAvatar"
+                                                class="bubble-avatar" />
+                                        </div>
+                                        <div class="custom-bubble-content"
+                                            :class="{'markdown-content': item.type === 'ai'}">
+                                            <!-- 用户消息直接显示 -->
+                                            <div v-if="item.type === 'user'" v-html="item.content"></div>
+                                            <!-- AI消息使用Markdown渲染 -->
+                                            <div v-else ref="markdownContent" v-html="renderMarkdown(item.content)">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- 添加底部空白区域，确保最后一个消息不被输入框挡住 -->
+                                    <div class="chat-bottom-spacer"></div>
+                                </div>
+
+                                <!-- 将输入框移出列表区域，放在chat-area下 -->
+                                <div class="input-container">
+                                    <div class="custom-input-area">
+                                        <textarea v-model="chatInput" :disabled="chatLoading"
+                                            placeholder="输入您的问题，按 Enter 发送..." @keydown.enter.prevent="sendQuestion"
+                                            @input="adjustTextareaHeight" rows="1" class="custom-textarea"></textarea>
+                                        <el-button type="primary" :loading="chatLoading" @click="sendQuestion"
+                                            class="send-button">
+                                            <el-icon>
+                                                <position />
+                                            </el-icon>
+                                            <span>发送</span>
+                                        </el-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </el-col>
+
+                        <!-- 右侧功能区域 (4) -->
+                        <el-col :span="4">
+                            <div class="learn-actions-panel">
+                                <h4>操作面板</h4>
+                                <el-button type="primary" icon="Download" @click="saveRecord" block>保存记录</el-button>
+                                <div class="action-options">
+                                    <el-checkbox v-model="autoGenerateNote">自动生成为笔记</el-checkbox>
+                                    <el-checkbox v-model="clearContextAfterSave">保存后清空上下文</el-checkbox>
+                                </div>
+                            </div>
+                        </el-col>
+                    </el-row>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="../static/js/learn/learn.js"></script>
+</body>
+
+</html>

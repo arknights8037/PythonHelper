@@ -1,0 +1,91 @@
+/* Markdown内容样式 */
+.markdown-content {
+    overflow-wrap: break-word;
+}
+
+.markdown-content pre {
+    background-color: #f6f8fa;
+    border-radius: 4px;
+    padding: 12px;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+.markdown-content code {
+    font-family: Consolas, Monaco, 'Andale Mono', monospace;
+    font-size: 0.9em;
+}
+
+.markdown-content p {
+    margin: 8px 0;
+}
+
+/* Markdown表格样式 */
+.markdown-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.markdown-content th {
+    background-color: #f2f6fc;
+    color: #606266;
+    font-weight: bold;
+    padding: 12px 8px;
+    border: 1px solid #ebeef5;
+    text-align: left;
+}
+
+.markdown-content td {
+    padding: 10px 8px;
+    border: 1px solid #ebeef5;
+    vertical-align: top;
+}
+
+.markdown-content tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.markdown-content tr:hover {
+    background-color: #f5f7fa;
+}
+
+/* 表格响应式设计 */
+@media screen and (max-width: 768px) {
+    .markdown-content table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .markdown-content td, 
+    .markdown-content th {
+        white-space: nowrap;
+    }
+}
+
+/* 代码块与表格冲突优化 */
+.markdown-content table pre {
+    margin: 0;
+    max-width: 100%;
+    overflow: auto;
+}
+
+/* 添加到markdown.css中 */
+.table-responsive {
+    overflow-x: auto;
+    max-width: 100%;
+    margin: 16px 0;
+}
+
+/* 固定宽度表格的列宽处理 */
+.markdown-content table.fixed-width {
+    table-layout: fixed;
+}
+
+.markdown-content table.fixed-width td {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}

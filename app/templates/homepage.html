@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python学习助手:主页</title>
+
+    <!-- CSS文件 -->
+    <link rel="stylesheet" href="../static/css/main.css">
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/element-plus.css">
+    <link rel="stylesheet" href="../static/css/codemirror.css">
+    <link rel="stylesheet" href="../static/css/header.css">
+    <link rel="stylesheet" href="../static/css/homepage.css">
+
+    <!-- Vue 3 -->
+    <script src="../static/js/vue.global.js"></script>
+
+    <!-- Element Plus -->
+    <script src="../static/js/element-plus.global.js"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <!-- Axios -->
+    <script src="../static/js/axios.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <!-- 页面顶部导航栏 -->
+        <div class="header">
+            <div class="nav-container">
+                <div class="logo">Python学习助手</div>
+                <el-menu mode="horizontal" :default-active="currentPage" router class="nav-menu">
+                    <el-menu-item index="/homepage" @click="navigateTo('/homepage')">
+                        <el-icon><el-icon-house /></el-icon>主页
+                    </el-menu-item>
+                    <el-menu-item index="/learn" @click="navigateTo('/learn')">
+                        <el-icon><el-icon-reading /></el-icon>学习
+                    </el-menu-item>
+                    <el-menu-item index="/note" @click="navigateTo('/note')">
+                        <el-icon><el-icon-notebook /></el-icon>笔记
+                    </el-menu-item>
+                    <el-menu-item index="/code" @click="navigateTo('/code')">
+                        <el-icon><el-icon-terminal /></el-icon>代码
+                    </el-menu-item>
+                    <el-menu-item index="/user" @click="navigateTo('/user')">
+                        <el-icon><el-icon-user /></el-icon>个人
+                    </el-menu-item>
+                </el-menu>
+            </div>
+        </div>
+
+        <!-- 学习平台首页内容 -->
+        <div class="homepage-layout">
+            <!-- 左侧边栏 -->
+            <div class="sidebar left-sidebar">
+                <!-- 快速链接卡片 -->
+                <div class="sidebar-card quick-links">
+                    <h3>快速链接</h3>
+                    <ul>
+                        <li><el-button text @click="navigateTo('/learn')">
+                                <el-icon><el-icon-reading /></el-icon> 学习中心
+                            </el-button></li>
+                        <li><el-button text @click="navigateTo('/note')">
+                                <el-icon><el-icon-notebook /></el-icon> 我的笔记
+                            </el-button></li>
+                        <li><el-button text @click="navigateTo('/code')">
+                                <el-icon><el-icon-terminal /></el-icon> 代码编辑器
+                            </el-button></li>
+                    </ul>
+                </div>
+
+                <!-- 下载链接卡片 -->
+                <div class="sidebar-card downloads">
+                    <h3>软件下载</h3>
+                    <div class="download-buttons">
+                        <el-button type="primary" @click="downloadPython">
+                            <el-icon><el-icon-download /></el-icon> Python
+                        </el-button>
+                        <el-button type="success" @click="downloadVSCode">
+                            <el-icon><el-icon-download /></el-icon> VS Code
+                        </el-button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间内容区域 -->
+            <div class="main-content">
+                <!-- 帖子控制器 -->
+                <div class="post-controller">
+                    <el-segmented-control v-model="viewMode" class="view-selector">
+                        <el-segmented-control-option label="全部" value="all"></el-segmented-control-option>
+                        <el-segmented-control-option label="我的" value="mine"></el-segmented-control-option>
+                        <el-segmented-control-option label="自定义查看" value="custom"></el-segmented-control-option>
+                    </el-segmented-control>
+
+                    <!-- 发帖按钮 (在全部或我的模式下显示) -->
+                    <div v-if="viewMode !== 'custom'" class="post-actions">
+                        <el-button type="primary" @click="showPostDialog = true">
+                            <el-icon><el-icon-edit /></el-icon> 发布新帖
+                        </el-button>
+                    </div>
+
+                    <!-- 筛选和搜索功能 (在自定义查看模式下显示) -->
+                    <div v-else class="filter-section">
+                        <el-input v-model="searchQuery" placeholder="搜索帖子..." prefix-icon="el-icon-search" clearable>
+                        </el-input>
+                        <el-select v-model="filterOption" placeholder="筛选方式">
+                            <el-option label="最新发布" value="latest"></el-option>
+                            <el-option label="最多收藏" value="popular"></el-option>
+                        </el-select>
+                        <el-button type="primary" @click="applyFilter">
+                            应用筛选
+                        </el-button>
+                    </div>
+                </div>
+
+                <!-- 帖子查看区 -->
+                <div class="posts-container" ref="postsContainer" @scroll="handleScroll">
+                    <!-- 加载状态 -->
+                    <div v-if="loading" class="loading-state">
+                        <el-skeleton :rows="5" animated />
+                    </div>
+
+                    <!-- 无内容状态 -->
+                    <el-empty v-else-if="posts.length === 0" description="暂无帖子"></el-empty>
+
+                    <!-- 帖子列表 -->
+                     {% raw %}
+                    <div v-else class="posts-list">
+                        <div v-for="post in posts" :key="post.topic_id" class="post-item">
+                            <el-card shadow="hover">
+                                <template #header>
+                                    <div class="post-header">
+                                        <h3 class="post-title">{{ post.title }}</h3>
+                                        <div class="post-meta">
+                                            <el-avatar :size="32"
+                                                :src="post.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'"></el-avatar>
+                                            <span class="post-author">{{ post.nickname || '用户' + post.user_id }}</span>
+                                            <span class="post-time">{{ post.create_time }}</span>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div class="post-content">{{ post.content }}</div>
+                                <div class="post-actions">
+                                    <el-button text size="small" @click="favoritePost(post)">
+                                        <el-icon><el-icon-star /></el-icon> 收藏 ({{ post.favorite_count || 0 }})
+                                    </el-button>
+                                    <el-button text size="small" @click="commentPost(post)">
+                                        <el-icon><el-icon-chat /></el-icon> 评论
+                                    </el-button>
+                                </div>
+                            </el-card>
+                        </div>
+                    </div>
+                    {% endraw %}
+                    <!-- 加载更多 -->
+                    <div v-if="loadingMore" class="loading-more">
+                        <el-icon class="loading-icon"><el-icon-loading /></el-icon> 加载更多内容...
+                    </div>
+
+                    <!-- 没有更多内容 -->
+                    <div v-if="noMorePosts && posts.length > 0" class="no-more">
+                        没有更多内容了
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧边栏 -->
+            <div class="sidebar right-sidebar">
+                <!-- 右侧卡片1 -->
+                <div class="sidebar-card">
+                    <h3>学习统计</h3>
+                    <div id="learn-heatmap" class="learn-stats">
+                        {% raw %}
+                        <div v-if="learningStats.loading" class="loading-stats">
+                            <el-skeleton :rows="3" animated />
+                        </div>
+                        <div v-else-if="learningStats.error" class="stats-error">
+                            <el-empty description="加载学习统计失败" :image-size="60">
+                                <el-button size="small" @click="fetchLearningStats">重试</el-button>
+                            </el-empty>
+                        </div>
+                        <div v-else class="heatmap-container">
+                            <div class="heatmap-title">过去90天学习记录：</div>
+                            <div class="heatmap-legend">
+                                <span>较少</span>
+                                <div class="heatmap-colors">
+                                    <div class="heatmap-color" style="background-color: #ebedf0;"></div>
+                                    <div class="heatmap-color" style="background-color: #9be9a8;"></div>
+                                    <div class="heatmap-color" style="background-color: #40c463;"></div>
+                                    <div class="heatmap-color" style="background-color: #30a14e;"></div>
+                                    <div class="heatmap-color" style="background-color: #216e39;"></div>
+                                </div>
+                                <span>较多</span>
+                            </div>
+                            <div class="heatmap-grid">
+                                <div v-for="(week, weekIndex) in learningStats.weeks" :key="`week-${weekIndex}`" class="heatmap-week">
+                                    <div v-for="(day, dayIndex) in week" :key="`day-${weekIndex}-${dayIndex}`" 
+                                        class="heatmap-day" 
+                                        :style="getHeatmapStyle(day ? day.count : 0)"
+                                        :title="day && day.date ? `${day.date}: ${day.count || 0}条学习记录` : '无记录'">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endraw %}
+                    </div>
+                </div>
+
+                <!-- 右侧卡片2 -->
+                <div class="sidebar-card">
+                    <h3>热门话题</h3>
+                    <div class="hot-topics-placeholder">
+                        <p>热门话题占位内容</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 发帖对话框 -->
+        <el-dialog v-model="showPostDialog" title="发布新帖" width="550px" destroy-on-close>
+            <el-form :model="newPost" label-position="top">
+                <el-form-item label="标题" required>
+                    <el-input v-model="newPost.title" placeholder="请输入帖子标题" maxlength="50" show-word-limit></el-input>
+                </el-form-item>
+                <el-form-item label="内容" required>
+                    <el-input v-model="newPost.content" type="textarea" placeholder="请输入帖子内容" :rows="6" maxlength="2000"
+                        show-word-limit>
+                    </el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="showPostDialog = false">取消</el-button>
+                    <el-button type="primary" @click="submitPost" :loading="submitting">
+                        发布
+                    </el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <!-- 引入自定义脚本 -->
+    <script src="../static/js/homepage/homepage.js"></script>
+
+
+
+</body>
+
+</html>

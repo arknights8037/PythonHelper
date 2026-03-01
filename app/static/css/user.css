@@ -1,0 +1,42 @@
+.user-container {
+    width: 100%;
+    min-height: calc(100vh - 120px);
+}
+
+.user-aside {
+    border-right: 1px solid #eaeaea;
+    background-color: #f9f9f9;
+}
+
+.user-menu {
+    height: 100%;
+}
+
+.user-main {
+    padding: 20px;
+}
+
+.user-panel {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.profile-card,
+.survey-card,
+.password-card,
+.feedback-card,
+.history-feedback-card {
+    margin-top: 20px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+h3 {
+    color: #409EFF;
+    margin-bottom: 20px;
+}
