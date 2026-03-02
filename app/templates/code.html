@@ -15,7 +15,6 @@
     <script>
         window.process = { env: { NODE_ENV: 'production' } };
     </script>
-    <script src="https://unpkg.com/vue-element-plus-x@1.1.6/dist/umd/index.js"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css">
@@ -118,39 +117,40 @@
             <div class="main-content">
                 <!-- AI对话区域 -->
                 <div class="chat-area" ref="chatArea">
-                    <div class="messages-container">
-                        <bubble-list :list="messages" :max-height="'600px'" :always-show-scrollbar="false"
-                            :show-back-button="true" :btn-loading="true" :btn-color="'#409EFF'" :btn-icon-size="24"
-                            :trigger-indices="'only-last'">
-                            <template #bubble="{ item }">
-                                <bubble :type="item.type" :is-markdown="item.isMarkdown ?? (item.type === 'ai')"
-                                    :typing="item.typing ?? (item.type === 'ai' ? { step: 2, interval: 50, suffix: '|' } : undefined)">
-                                    <template #avatar>
-                                        <img :src="item.type === 'user' ? userAvatar : aiAvatar"
-                                            class="bubble-avatar" />
-                                    </template>
-                                    <div v-if="item.type === 'user'" v-html="item.content"></div>
-                                    <div v-else v-html="item.content"></div>
+                    <div class="messages-container" ref="messagesContainer">
+                        {% raw %}
+                        <div v-for="(item, index) in messages" :key="item.id || index" :class="['message-row', item.type]">
+                            <div class="avatar-col">
+                                <el-avatar :size="36" :src="item.type === 'user' ? userAvatar : aiAvatar"></el-avatar>
+                            </div>
+                            <div class="message-content">
+                                <div class="bubble" :class="item.type">
+                                    <div v-if="item.type === 'ai' || item.isMarkdown" class="markdown-body" v-html="renderMarkdown(item.content)"></div>
+                                    <div v-else style="white-space: pre-wrap;">{{ item.content }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endraw %}
                     </div>
-                    </bubble>
-                    </template>
-                    </bubble-list>
-                </div>
 
-                <div class="chat-input-container">
-                    <!-- 输入框 -->
-                    <mention-sender v-model="chatInput" :loading="chatLoading" placeholder="输入您的Python相关问题..."
-                        :auto-size="{ minRows: 1, maxRows: 5 }" clearable allow-speech @send="sendMessage">
-                    </mention-sender>
-                    <!-- 下方功能区 -->
-                    <div class="chat-input-extra-row"
-                        style="display: flex; align-items: center; gap: 16px; margin-top: 8px;">
-                        
-                        <el-button type="primary" :loading="chatLoading" :disabled="!chatInput.trim()"
-                            @click="sendMessage">发送</el-button>
+                    <div class="chat-input-container">
+                        <!-- 输入框 -->
+                        <el-input
+                            v-model="chatInput"
+                            type="textarea"
+                            :autosize="{ minRows: 2, maxRows: 6 }"
+                            placeholder="输入您的Python相关问题... (Ctrl+Enter 发送)"
+                            @keydown.ctrl.enter.prevent="sendMessage"
+                            resize="none"
+                        ></el-input>
+                        <div class="input-actions" style="margin-top: 8px; text-align: right; display: flex; justify-content: flex-end; align-items: center;">
+                            <span v-if="chatLoading" style="margin-right: 10px; color: #909399; font-size: 12px;">AI正在思考中...</span>
+                            <el-button type="primary" :loading="chatLoading" :disabled="!chatInput.trim()" @click="sendMessage">
+                                发送 <el-icon class="el-icon--right"><el-icon-position /></el-icon>
+                            </el-button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
             <!-- 调整两个区域比例的手柄 -->
             <div class="resizer" ref="horizontalResizer" @mousedown="startHorizontalResize"></div>

@@ -116,37 +116,67 @@
     gap: 10px;
 }
 
-/* 气泡样式 */
+/* 消息行样式 */
+.message-row {
+    display: flex;
+    margin-bottom: 20px;
+    align-items: flex-start;
+}
+
+.message-row.user {
+    flex-direction: row-reverse;
+}
+
+.avatar-col {
+    flex-shrink: 0;
+    margin: 0 12px;
+}
+
+.message-content {
+    max-width: 80%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.message-row.user .message-content {
+    align-items: flex-end;
+}
+
+/* 气泡样式重写 */
 .bubble {
-    max-width: 85%;
-    padding: 10px 12px;
+    padding: 12px 16px;
     border-radius: 8px;
-    margin-bottom: 8px;
+    font-size: 14px;
+    line-height: 1.6;
     position: relative;
     word-break: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .bubble.user {
-    align-self: flex-end;
-    background-color: #e6f1fc;
-    margin-left: auto;
-    border-bottom-right-radius: 2px;
+    background-color: #ecf5ff;
+    color: #303133;
+    border-top-right-radius: 2px;
 }
 
 .bubble.ai {
-    align-self: flex-start;
     background-color: #f4f4f5;
-    margin-right: auto;
-    border-bottom-left-radius: 2px;
+    color: #303133;
+    border-top-left-radius: 2px;
+    border: 1px solid #e9e9eb;
 }
 
-/* 头像样式 */
-.bubble-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-right: 8px;
+/* Markdown样式微调 */
+.markdown-body {
+    font-size: 14px;
+    background-color: transparent !important;
+}
+.markdown-body pre {
+    background-color: #f6f8fa;
+    border-radius: 6px;
+    padding: 16px;
+    overflow: auto;
 }
 
 /* 输入区域容器 */
@@ -155,53 +185,15 @@
     bottom: 0;
     background-color: #fff;
     border-top: 1px solid #dcdfe6;
-    padding: 18px 10px 18px 10px;
+    padding: 15px;
     z-index: 10;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-    min-height: 80px;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    gap: 0;
+    gap: 10px;
 }
 
-/* 输入发送区域 */
-.mention-sender-container {
-    border-top: 1px solid #dcdfe6;
-    padding: 8px;
-    background-color: #fff;
-    position: absolute; /* 添加缺失的定位属性 */
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    z-index: 10;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-}
-
-/* 添加缺失的 mention-sender 类 */
-.mention-sender {
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
-/* 发送按钮样式 */
-.mention-sender .el-button {
-    border-radius: 18px;
-    height: 40px;
-    font-size: 16px;
-    padding: 0 22px;
-    margin-left: 10px;
-}
-
-.mention-sender .el-textarea__inner,
-.mention-sender .el-input__inner {
-    min-height: 48px !important;
-    font-size: 16px;
-    line-height: 1.6;
-}
-
-/* 深度思考模式按钮 */
+/* 移除旧样式 */
 .active-mode {
     color: #409eff;
     border: 1px solid #409eff !important;

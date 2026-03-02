@@ -7,8 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
             data() {
                 return {
                     showWelcome: true, // 控制欢迎消息显示
-                    userAvatar: '/static/img/user.png', // 用户头像路径
-                    aiAvatar: '/static/img/ai.png',     // AI头像路径
+                    userAvatar: '/static/img/user.jpg', // 用户头像路径
+                    aiAvatar: '/static/img/ai.jpg',     // AI头像路径
                     deepThinking: false,                // 深度思考开关
                     selectedModel: 'gpt-3.5',
                     currentPage: '/code',
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     editorCache: new Map(), // 用于缓存编辑器内容
                     editorMetadata: {},// 存储编辑器元数据
                     deepseekApiUrl: 'https://api.deepseek.com/chat/completions', // 预留
-                    deepseekApiKey: 'sk-12ecefa1b46f4b67ac446fa4baed7e7f',
+                    deepseekApiKey: 'sk-12ecefa1b46f4b67ac446fa4baed7e7f', // 注意：生产环境中强烈建议不要在前端暴露真实的API Key
                 }
             },
             computed: {
@@ -58,13 +58,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             },
             methods: {
+                updateEditorMetadata(fileId) {
+                    if (!this.monacoEditorInstance || !fileId) return;
+                    const model = this.monacoEditorInstance.getModel();
+                    const lineCount = model.getLineCount();
+                    let contentWithMetadata = [];
+                    for (let i = 1; i <= lineCount; i++) {
+                        contentWithMetadata.push({
+                            lineNumber: i,
+                            content: model.getLineContent(i)
+                        });
+                    }
+                    if (!this.editorMetadata[fileId]) {
+                        this.editorMetadata[fileId] = {};
+                    }
+                    this.editorMetadata[fileId].lineCount = lineCount;
+                    this.editorMetadata[fileId].lines = contentWithMetadata;
+                },
+                updateHighlighting() {
+                    this.$nextTick(() => {
+                        if (window.Prism) {
+                            Prism.highlightAll();
+                        }
+                    });
+                },
                 navigateTo(path) {
                     window.location.href = path;
                 },
                 toggleFileList() {
                     this.fileListCollapsed = !this.fileListCollapsed;
                 },
-                async fetchUserCodes() {
+                async fetchUserCodes(autoSelect = true) {
                     console.log('开始获取用户代码列表');
                     try {
                         const response = await axios.get('/api/code/codes');
@@ -78,8 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             }));
                             console.log('处理后的文件列表:', this.files);
 
-                            // 如果有文件，选择第一个
-                            if (this.files.length > 0) {
+                            // 如果有文件，且并没有选中的文件时选择第一个
+                            if (autoSelect && this.files.length > 0 && (!this.activeFile || !this.files.some(f => f.id === this.activeFile))) {
                                 this.selectFile(this.files[0].id);
                             }
                         } else {
@@ -102,23 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // 保存当前文件内容到缓存，包含行号信息
                     if (this.activeFile) {
-                        const model = this.monacoEditorInstance.getModel();
-                        const lineCount = model.getLineCount();
-
-                        // 获取每一行的内容和行号
-                        let contentWithMetadata = [];
-                        for (let i = 1; i <= lineCount; i++) {
-                            contentWithMetadata.push({
-                                lineNumber: i,
-                                content: model.getLineContent(i)
-                            });
-                        }
-
-                        this.editorMetadata[this.activeFile] = {
-                            lineCount: lineCount,
-                            lines: contentWithMetadata
-                        };
-
+                        this.updateEditorMetadata(this.activeFile);
                         this.editorCache.set(this.activeFile, this.monacoEditorInstance.getValue());
                     }
 
@@ -137,30 +145,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             this.editorCache.set(fileId, file.content || '');
 
                             // 生成初始元数据
-                            const model = this.monacoEditorInstance.getModel();
-                            const lineCount = model.getLineCount();
-
-                            let contentWithMetadata = [];
-                            for (let i = 1; i <= lineCount; i++) {
-                                contentWithMetadata.push({
-                                    lineNumber: i,
-                                    content: model.getLineContent(i)
-                                });
-                            }
-
-                            this.editorMetadata[fileId] = {
-                                lineCount: lineCount,
-                                lines: contentWithMetadata
-                            };
+                            this.updateEditorMetadata(fileId);
                         }
 
                         // 获取聊天记录
                         this.loadChatHistory(fileId);
-                        this.$nextTick(() => {
-                            if (window.Prism) {
-                                Prism.highlightAll();
-                            }
-                        });
+                        this.updateHighlighting();
                     }
                 },
                 async loadChatHistory(fileId) {
@@ -183,11 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.error('加载聊天记录失败:', error);
                         this.messages = [{ type: 'ai', content: '你好！我是Python学习助手。有什么可以帮你的吗？' }];
                     }
-                    this.$nextTick(() => {
-                        if (window.Prism) {
-                            Prism.highlightAll();
-                        }
-                    });
+                    this.updateHighlighting();
                 },
                 createNewFile() {
                     // 设置默认文件名，使用时间戳确保唯一性
@@ -215,23 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         // 获取编辑器内容及元数据
                         const codeContent = this.monacoEditorInstance.getValue();
-                        const model = this.monacoEditorInstance.getModel();
-                        const lineCount = model.getLineCount();
-
-                        // 更新元数据
-                        let contentWithMetadata = [];
-                        for (let i = 1; i <= lineCount; i++) {
-                            contentWithMetadata.push({
-                                lineNumber: i,
-                                content: model.getLineContent(i)
-                            });
-                        }
 
                         if (this.activeFile) {
-                            this.editorMetadata[this.activeFile] = {
-                                lineCount: lineCount,
-                                lines: contentWithMetadata
-                            };
+                            this.updateEditorMetadata(this.activeFile);
                         }
 
                         const chatRecordJSON = JSON.stringify(this.messages);
@@ -260,8 +232,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             this.$message.success('保存成功');
                             this.saveDialogVisible = false;
 
+                            const isNewFile = !this.activeFile;
+                            const newCid = response.data.data ? response.data.data.cid : null;
+
                             // 刷新文件列表
-                            await this.fetchUserCodes();
+                            await this.fetchUserCodes(false);
+
+                            if (isNewFile && newCid) {
+                                this.selectFile(newCid);
+                            } else if (!this.activeFile && this.files.length > 0) {
+                                this.selectFile(this.files[0].id);
+                            }
                         } else {
                             this.$message.error(response.data.msg || '保存失败');
                         }
@@ -290,9 +271,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.sendMessage("请详细解释这段代码的逻辑和工作原理", currentCode);
                 },
                 async sendMessage(userInputParam, codeParam) {
-                    // 使用参数或当前输入框内容
-                    const userInput = userInputParam || this.chatInput;
-                    console.log('发送消息:', userInput);
+                    // 调试输出接收到的参数
+                    console.log('sendMessage called with:', userInputParam, codeParam);
+
+                    // 使用参数或当前输入框内容，如果是事件对象则忽略
+                    let userInput = userInputParam;
+                    // 如果参数是事件对象（InputEvent, KeyboardEvent等），或者是 Vue 的事件 payload 对象且不是我们在意的数组格式，则忽略它
+                    if (userInputParam && (userInputParam instanceof Event || (typeof userInputParam === 'object' && !Array.isArray(userInputParam)))) {
+                        userInput = this.chatInput;
+                    } else if (typeof userInputParam !== 'string') {
+                        // 尝试转为字符串，如果转换为 "undefined" 或 "null" 则使用 chatInput
+                        const strVal = String(userInputParam);
+                        if (strVal === 'undefined' || strVal === 'null' || strVal === '[object Object]') {
+                            userInput = this.chatInput;
+                        } else {
+                            userInput = strVal || this.chatInput;
+                        }
+                    }
+                    
+                    console.log('发送消息 (经过处理):', userInput);
                     if ((!userInput || !userInput.trim()) && this.chatLoading) return;
 
                     // 获取当前代码
@@ -306,8 +303,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         timestamp: new Date().toISOString()
                     });
 
-                    // 如果是手动输入的消息，清空输入框
-                    if (!userInputParam) {
+                    // 如果是手动输入的消息（非预设参数），清空输入框
+                    if (userInput === this.chatInput) {
                         this.chatInput = '';
                     }
 
@@ -361,6 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const decoder = new TextDecoder('utf-8');
                         let done = false;
                         let aiContent = '';
+                        let buffer = '';
 
                         // 找到最后一个ai消息的索引
                         const aiMsgIndex = this.messages.length - 1;
@@ -369,10 +367,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             const { value, done: doneReading } = await reader.read();
                             done = doneReading;
                             if (value) {
-                                const chunk = decoder.decode(value, { stream: true });
-                                chunk.split('\n').forEach(line => {
-                                    if (line.startsWith('data:')) {
-                                        const dataStr = line.replace('data:', '').trim();
+                                buffer += decoder.decode(value, { stream: true });
+                                const lines = buffer.split('\n');
+                                buffer = lines.pop(); // Keep the last incomplete line in the buffer
+                                
+                                lines.forEach(line => {
+                                    const trimmedLine = line.trim();
+                                    if (trimmedLine.startsWith('data:')) {
+                                        const dataStr = trimmedLine.replace(/^data:\s*/, '');
                                         if (!dataStr || dataStr === '[DONE]') return;
                                         try {
                                             const data = JSON.parse(dataStr);
@@ -386,11 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 });
                             }
                             this.$nextTick(() => this.scrollToLatestMessage());
-                            this.$nextTick(() => {
-                                if (window.Prism) {
-                                    Prism.highlightAll();
-                                }
-                            });
+                            this.updateHighlighting();
                         }
                     } catch (error) {
                         // 强制响应式刷新
@@ -410,10 +408,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 滚动到最新消息
                 scrollToLatestMessage() {
-                    const chatContainer = document.querySelector('.epx-ai-chat__messages');
-                    if (chatContainer) {
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                    }
+                    this.$nextTick(() => {
+                        const container = this.$refs.messagesContainer;
+                        if (container) {
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    });
                 },
                 startHorizontalResize(e) {
                     e.preventDefault();
@@ -539,23 +539,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (this.activeFile) {
                             // 保存内容到缓存
                             this.editorCache.set(this.activeFile, this.monacoEditorInstance.getValue());
-
+                            
                             // 更新元数据
-                            const model = this.monacoEditorInstance.getModel();
-                            const lineCount = model.getLineCount();
-
-                            let contentWithMetadata = [];
-                            for (let i = 1; i <= lineCount; i++) {
-                                contentWithMetadata.push({
-                                    lineNumber: i,
-                                    content: model.getLineContent(i)
-                                });
-                            }
-
-                            this.editorMetadata[this.activeFile] = {
-                                lineCount: lineCount,
-                                lines: contentWithMetadata
-                            };
+                            this.updateEditorMetadata(this.activeFile);
                         }
                     });
 
@@ -718,6 +704,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         const response = await axios.delete(`/api/code/codes/${fileId}`);
 
                         if (response.data.code === 0) {
+                            // 从缓存中清理
+                            if (this.editorCache && this.editorCache.has(fileId)) {
+                                this.editorCache.delete(fileId);
+                            }
+                            if (this.editorMetadata && this.editorMetadata[fileId]) {
+                                delete this.editorMetadata[fileId];
+                            }
+
                             // 从文件列表中移除
                             const index = this.files.findIndex(f => f.id === fileId);
                             if (index !== -1) {
@@ -734,6 +728,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     if (this.monacoEditorInstance) {
                                         this.monacoEditorInstance.setValue('');
                                     }
+                                    // 清空聊天记录
+                                    this.messages = [
+                                        { type: 'ai', content: '你好！我是Python学习助手。有什么可以帮你的吗？' }
+                                    ];
                                 }
                             }
 
@@ -751,143 +749,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         this.deleteDialogVisible = false;
                         this.fileToDelete = null;
                     }
-                },
-                initMonacoEditor() {
-                    // 初始化Monaco编辑器
-                    this.monacoEditorInstance = markRaw(monaco.editor.create(
-                        this.$refs.codeEditor, {
-                        value: '# 开始编写Python代码\n',
-                        language: 'python',
-                        theme: 'vs',
-                        automaticLayout: true,
-                        minimap: { enabled: true },
-                        scrollBeyondLastLine: false,
-                        fontSize: 14,
-                        tabSize: 4,
-                        insertSpaces: true,
-                        wordWrap: 'on'
-                    }));
-
-
-                    // 添加编辑器改变事件，自动保存到缓存
-                    this.monacoEditorInstance.onDidChangeModelContent(() => {
-                        if (this.activeFile) {
-                            // 保存内容到缓存
-                            this.editorCache.set(this.activeFile, this.monacoEditorInstance.getValue());
-
-                            // 更新元数据
-                            const model = this.monacoEditorInstance.getModel();
-                            const lineCount = model.getLineCount();
-
-                            let contentWithMetadata = [];
-                            for (let i = 1; i <= lineCount; i++) {
-                                contentWithMetadata.push({
-                                    lineNumber: i,
-                                    content: model.getLineContent(i)
-                                });
-                            }
-
-                            this.editorMetadata[this.activeFile] = {
-                                lineCount: lineCount,
-                                lines: contentWithMetadata
-                            };
-                        }
-                    });
-
-                    // 添加选择内容改变事件，更新元数据
-                    this.monacoEditorInstance.onDidChangeCursorSelection(() => {
-                        if (this.activeFile) {
-                            const selection = this.monacoEditorInstance.getSelection();
-                            if (selection) {
-                                // 更新选中内容元数据
-                                if (!this.editorMetadata[this.activeFile]) {
-                                    this.editorMetadata[this.activeFile] = {};
-                                }
-
-                                this.editorMetadata[this.activeFile].selection = {
-                                    startLineNumber: selection.startLineNumber,
-                                    startColumn: selection.startColumn,
-                                    endLineNumber: selection.endLineNumber,
-                                    endColumn: selection.endColumn
-                                };
-                            }
-                        }
-                    });
-
-                    // 添加快捷键绑定
-                    this.monacoEditorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-                        this.saveFile();
-                    });
-
-                    // 运行代码的快捷键
-                    this.monacoEditorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-                        // 获取选中代码或整个文件并运行
-                        const selection = this.monacoEditorInstance.getSelection();
-                        let codeToRun = '';
-
-                        if (selection && !selection.isEmpty()) {
-                            // 运行选中的代码
-                            const model = this.monacoEditorInstance.getModel();
-                            codeToRun = model.getValueInRange(selection);
-                        } else {
-                            // 运行整个文件
-                            codeToRun = this.monacoEditorInstance.getValue();
-                        }
-
-                        // 这里可以添加运行代码的逻辑
-                        this.runCode(codeToRun);
-                    });
-                },
-                // 运行代码方法
-                async runCode(codeParam) {
-                    const code = codeParam || (this.monacoEditorInstance ? this.monacoEditorInstance.getValue() : '');
-                    if (!code) {
-                        this.consoleOutput = "请先输入代码";
-                        return;
-                    }
-
-                    try {
-                        // 在开始时清空之前的输出，显示执行中状态
-                        this.consoleOutput = "执行中...";
-
-                        // 获取当前活动文件的信息
-                        const activeFileObj = this.activeFile ? this.files.find(f => f.id === this.activeFile) : null;
-                        const filename = activeFileObj ? activeFileObj.name : 'untitled.py';
-
-                        // 向后端发送运行代码请求
-                        const response = await axios.post('/api/code/run', {
-                            code: code,
-                            cid: this.activeFile,
-                            filename: filename
-                        });
-
-                        // 检查响应状态
-                        if (response.data.code === 0) {
-                            // 正确更新控制台输出
-                            const output = response.data.data.output || "执行成功，但没有输出";
-                            this.consoleOutput = output;
-                            // 自动滚动终端到底部
-                            this.$nextTick(() => {
-                                const terminalEl = document.querySelector('.console-output pre');
-                                if (terminalEl) {
-                                    terminalEl.textContent = output;
-
-                                    const scrollEl = document.querySelector('.terminal-style');
-                                    if (scrollEl) {
-                                        scrollEl.scrollTop = scrollEl.scrollHeight;
-                                    }
-                                }
-                            });
-                        } else {
-                            // 处理错误情况
-                            this.consoleOutput = `运行错误: ${response.data.msg}`;
-                        }
-                    } catch (error) {
-                        console.error('运行代码失败:', error);
-                        this.consoleOutput = `错误: ${error.message || '运行失败'}`;
-                    }
                 }
             },
+
             async mounted() {
                 // 初始化Monaco编辑器
                 this.initMonacoEditor();
@@ -910,67 +774,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
 
-        // 注册Element Plus图标组件
-        app.component('el-icon-house', {
-            template: `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M192 413.952V896h640V413.952L512 147.328 192 413.952zM139.52 374.4l352-293.312a32 32 0 0 1 40.96 0l352 293.312A32 32 0 0 1 896 398.976V928a32 32 0 0 1-32 32H160a32 32 0 0 1-32-32V398.976a32 32 0 0 1 11.52-24.576z"></path></svg>`
-        });
-        app.component('el-icon-reading', {
-            template: `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M512 863.36l384-54.848v-638.72l-384 54.848zM512 91.52L128 146.368v638.72l384-54.848zM512 41.728a32 32 0 0 1 31.552 27.52L544 96v800a32 32 0 0 1-32 32 32 32 0 0 1-31.552-27.52L480 864V96a32 32 0 0 1 32-54.272z"></path></svg>`
-        });
-        app.component('el-icon-notebook', {
-            template: `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M192 128v768h640V128H192zm-32-64h704a32 32 0 0 1 32 32v832a32 32 0 0 1-32 32H160a32 32 0 0 1-32-32V96a32 32 0 0 1 32-32z"></path><path fill="currentColor" d="M672 128h64v768h-64zM96 192h128q32 0 32 32t-32 32H96q-32 0-32-32t32-32zm0 192h128q32 0 32 32t-32 32H96q-32 0-32-32t32-32zm0 192h128q32 0 32 32t-32 32H96q-32 0-32-32t32-32zm0 192h128q32 0 32 32t-32 32H96q-32 0-32-32t32-32z"></path></svg>`
-        });
-        app.component('el-icon-terminal', {
-            template: `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M310.293 77.329l471.701 179.2c52.352 19.883 77.76 83.2 57.877 135.424-7.68 20.053-22.528 36.352-41.472 44.8L333.568 608.694c-52.224 19.883-111.488-5.76-131.371-57.856a108.8 108.8 0 0 1-1.152-59.2l85.632 32.512 158.72-71.68-170.88-64.896-72.96 27.648-87.04-33.024c12.288-45.44 52.48-76.8 99.2-91.2zM959.552 895.488H64.448a64.448 64.448 0 0 0 0 128.896h895.104a64.448 64.448 0 0 0 0-128.896zM0 895.488z"></path></svg>`
-        });
-        app.component('el-icon-user', {
-            template: `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M512 512a192 192 0 1 0 0-384 192 192 0 0 0 0 384zm0 64a256 256 0 1 1 0-512 256 256 0 0 1 0 512zm320 320v-96a96 96 0 0 0-96-96H288a96 96 0 0 0-96 96v96a32 32 0 1 1-64 0v-96a160 160 0 0 1 160-160h448a160 160 0 0 1 160 160v96a32 32 0 1 1-64 0z"></path></svg>`
-        });
-        app.component('el-icon-search', {
-            template: `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M795.904 750.72l124.992 124.928a32 32 0 0 1-45.248 45.248l-124.928-124.992a416 416 0 1 1 45.248-45.248zM480 832a352 352 0 1 0 0-704 352 352 0 0 0 0 704z"></path></svg>`
-        });
-        app.component('el-icon-arrow-left', {
-            template: `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M609.408 149.376L277.76 489.6a32 32 0 0 0 0 44.672l331.648 340.352a29.12 29.12 0 0 0 41.728 0 30.592 30.592 0 0 0 0-42.752L339.264 511.936l311.872-319.872a30.592 30.592 0 0 0 0-42.688 29.12 29.12 0 0 0-41.728 0z"></path></svg>`
-        });
-        app.component('el-icon-arrow-right', {
-            template: `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M340.864 149.312a30.592 30.592 0 0 0 0 42.752L652.736 512 340.864 831.872a30.592 30.592 0 0 0 0 42.752 29.12 29.12 0 0 0 41.728 0L714.24 534.336a32 32 0 0 0 0-44.672L382.592 149.376a29.12 29.12 0 0 0-41.728 0z"></path></svg>`
-        });
-
-        app.component('el-icon-position', {
-            template: `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M512 512a192 192 0 1 0 0-384 192 192 0 0 0 0 384zm0 64a256 256 0 1 1 0-512 256 256 0 0 1 0 512z"></path><path fill="currentColor" d="M512 512a32 32 0 0 1 32 32v256a32 32 0 1 1-64 0V544a32 32 0 0 1 32-32z"></path><path fill="currentColor" d="M384 649.088v64.96C269.76 732.352 192 771.904 192 800c0 37.696 139.904 96 320 96s320-58.304 320-96c0-28.16-77.76-67.648-192-85.952v-64.96C789.12 671.04 896 730.368 896 800c0 88.32-171.904 160-384 160s-384-71.68-384-160c0-69.632 106.88-128.96 256-150.912z"></path></svg>`
-        });
-
-        app.component('more', {
-            template: `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M176 416a112 112 0 1 0 0 224 112 112 0 0 0 0-224zm336 0a112 112 0 1 0 0 224 112 112 0 0 0 0-224zm336 0a112 112 0 1 0 0 224 112 112 0 0 0 0-224z"></path></svg>`
-        });
 
         // 使用Element Plus
         app.use(ElementPlus);
 
+
         // 在 app.mount('#app') 前添加
-        if (window.ElementPlusX) {
-            const { BubbleList, Bubble, MentionSender, Welcome, Typewriter } = window.ElementPlusX;
-            console.log("组件是否存在:",
-                Boolean(BubbleList),
-                Boolean(Bubble),
-                Boolean(MentionSender),
-                Boolean(Welcome),
-                Boolean(Typewriter),
-            );
-            app.component('BubbleList', BubbleList);
-            app.component('Bubble', Bubble);
-            app.component('mention-sender', MentionSender);
-            app.component('Welcome', Welcome);
-            app.component('Typewriter', Typewriter);
-        } else {
-            console.error("ElementPlusX 未加载或组件不可用");
-        }
+        // ElementPlusX 组件已移除，使用原生Element Plus组件替代
+
 
 
         if (window.ElementPlusIconsVue) {
             for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
                 app.component(key, component);
-
+                // 同时也注册 el-icon-xxx 形式，以便兼容旧代码
+                const kebabName = key.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+                app.component(`el-icon-${kebabName}`, component);
+            }
+            // 单独注册 more 组件以兼容 <more /> 用法
+            if (ElementPlusIconsVue.More) {
+                app.component('more', ElementPlusIconsVue.More);
             }
         } else {
             console.error('ElementPlusIconsVue 未加载，请确认相关库的引入');
