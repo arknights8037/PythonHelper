@@ -121,16 +121,16 @@
                         <el-button :type="activeTab==='learn'?'primary':'default'" @click="startLearning"
                             size="small">开始学习</el-button>
                         <el-button :type="activeTab==='qa'?'primary':'default'" @click="startQA"
-                            size="small">开始问答</el-button>
+                            :disabled="isQaDisabled" size="small">开始问答</el-button>
                     </div>
                 </div>
                 <div class="learn-content-body">
-                    <el-row :gutter="20">
-                        <!-- 左侧步骤条区域 (4) -->
-                        <el-col :span="4">
+                    <el-row class="content-row-wrapper">
+                        <!-- 左侧步骤条区域 -->
+                        <el-col :span="3" :md="5" :lg="4" :xl="3" class="steps-col">
                             <div class="learn-steps-container">
                                 <el-steps direction="vertical" :active="activeStep" class="centered-steps">
-                                    <el-step title="确认教学方案" :status="promptStatus">
+                                    <el-step title="正在确认教学方案" :status="promptStatus">
                                         <template #icon>
                                             <el-icon :class="{'is-rotating': promptStatus === 'process'}">
                                                 <Document v-if="promptStatus === 'wait'" />
@@ -139,7 +139,7 @@
                                             </el-icon>
                                         </template>
                                     </el-step>
-                                    <el-step title="学习内容生成" :status="learningStatus">
+                                    <el-step title="正在生成学习内容" :status="learningStatus">
                                         <template #icon>
                                             <el-icon :class="{'is-rotating': learningStatus === 'process'}">
                                                 <Edit v-if="learningStatus === 'wait'" />
@@ -148,7 +148,7 @@
                                             </el-icon>
                                         </template>
                                     </el-step>
-                                    <el-step title="交互式问答" :status="qaStatus">
+                                    <el-step title="正在进行交互式问答" :status="qaStatus">
                                         <template #icon>
                                             <el-icon :class="{'is-rotating': qaStatus === 'process'}">
                                                 <svg v-if="qaStatus === 'wait'" xmlns="http://www.w3.org/2000/svg"
@@ -169,11 +169,18 @@
                             </div>
                         </el-col>
 
-                        <!-- 中间聊天区域 (16) -->
-                        <el-col :span="16">
+                        <!-- 中间聊天区域 -->
+                        <el-col :span="21" :md="19" :lg="20" :xl="21" class="chat-col">
                             <div class="chat-area">
                                 <!-- 消息列表区域 -->
                                 <div class="custom-bubble-list" ref="messageContainer">
+                                    <!-- 空状态展示 -->
+                                    <el-empty 
+                                        v-if="(activeTab === 'learn' ? learningContent : qaContent).length === 0" 
+                                        description="选择知识点点击开始学习或直接输入问题以开始"
+                                        style="height: 100%;">
+                                    </el-empty>
+
                                     <div v-for="item in activeTab === 'learn' ? learningContent : qaContent"
                                         :key="item.id" class="custom-bubble-wrapper"
                                         :class="{'custom-bubble-user': item.type === 'user', 'custom-bubble-ai': item.type === 'ai'}">
@@ -186,7 +193,11 @@
                                             <!-- 用户消息直接显示 -->
                                             <div v-if="item.type === 'user'" v-html="item.content"></div>
                                             <!-- AI消息使用Markdown渲染 -->
-                                            <div v-else ref="markdownContent" v-html="renderMarkdown(item.content)">
+                                            <div v-else ref="markdownContent">
+                                                <div v-if="item.content === ''" style="color: #666; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                                                    <el-icon class="is-rotating"><Loading /></el-icon> 正在生成个性化内容中...
+                                                </div>
+                                                <div v-else v-html="renderMarkdown(item.content)"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -208,18 +219,11 @@
                                             <span>发送</span>
                                         </el-button>
                                     </div>
-                                </div>
-                            </div>
-                        </el-col>
-
-                        <!-- 右侧功能区域 (4) -->
-                        <el-col :span="4">
-                            <div class="learn-actions-panel">
-                                <h4>操作面板</h4>
-                                <el-button type="primary" icon="Download" @click="saveRecord" block>保存记录</el-button>
-                                <div class="action-options">
-                                    <el-checkbox v-model="autoGenerateNote">自动生成为笔记</el-checkbox>
-                                    <el-checkbox v-model="clearContextAfterSave">保存后清空上下文</el-checkbox>
+                                    <div class="bottom-action-options">
+                                        <el-checkbox v-model="autoGenerateNote">自动生成为笔记</el-checkbox>
+                                        <el-checkbox v-model="clearContextAfterSave">保存后清空上下文</el-checkbox>
+                                        <el-button type="primary" icon="Download" size="small" @click="saveRecord" style="margin-left: 15px;">保存记录</el-button>
+                                    </div>
                                 </div>
                             </div>
                         </el-col>

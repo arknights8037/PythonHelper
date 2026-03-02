@@ -225,10 +225,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // 更新步骤状态
+                this.activeStep = 0;
+                this.promptStatus = 'process';
+                this.learningStatus = 'wait';
+                this.qaStatus = 'wait';
+
                 this.isQaDisabled = true; // 禁用问答按钮
-                setTimeout(() => {
-                    this.isQaDisabled = false; // 60秒后恢复
-                }, 60000);
 
                 // 清空学习内容
                 this.learningContent = [];
@@ -291,6 +294,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 // 保存提示词到前端
                                 this.learningPrompt = data.content;
                                 console.log('收到学习提示词:', this.learningPrompt);
+                                this.promptStatus = 'success';
+                                this.activeStep = 1;
+                                this.learningStatus = 'process';
                             } else if (data.type === 'content' && data.content) {
                                 // 更新当前AI消息内容
                                 const aiMsgIndex = this.learningContent.findIndex(msg => msg.id === aiMessageId);
@@ -298,7 +304,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     this.learningContent[aiMsgIndex].fullContent += data.content;
                                     this.learningContent[aiMsgIndex].content = this.learningContent[aiMsgIndex].fullContent;
                                     this.scrollToBottom();
-                                    this.highlightCode();
                                 }
                             } else if (data.type === 'end') {
                                 // 流结束，标记消息完成
@@ -307,6 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     this.learningContent[aiMsgIndex].isComplete = true;
                                     this.learningContent[aiMsgIndex].content = this.learningContent[aiMsgIndex].fullContent;
                                 }
+
+                                this.learningStatus = 'success';
+                                this.activeStep = 2;
+                                this.isQaDisabled = false; // 学习结束，启用问答按钮
 
                                 this.eventSource.close();
                                 this.eventSource = null;
@@ -326,6 +335,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             this.eventSource.close();
                             this.eventSource = null;
                         }
+                        this.isQaDisabled = false;
+                        this.promptStatus = 'error';
+                        this.learningStatus = 'error';
                     };
 
                 } catch (error) {
@@ -335,6 +347,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         this.eventSource.close();
                         this.eventSource = null;
                     }
+                    this.isQaDisabled = false;
+                    this.promptStatus = 'error';
+                    this.learningStatus = 'error';
                 }
             },
 
@@ -357,6 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 this.chatLoading = true;
                 this.qaStatus = 'process';
+                this.activeStep = 2;
 
                 // 清空之前的问答内容（可选）
                 // this.qaContent = [];
@@ -390,7 +406,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     this.qaContent[aiMsgIndex].fullContent += data.content;
                                     this.qaContent[aiMsgIndex].content = this.qaContent[aiMsgIndex].fullContent;
                                     this.scrollToBottom();
-                                    this.highlightCode();
                                 }
                             } else if (data.type === 'end') {
                                 // 流结束，标记消息完成
@@ -536,7 +551,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 this.learningContent[aiMsgIndex].fullContent += jsonData.content;
                                                 this.learningContent[aiMsgIndex].content = this.learningContent[aiMsgIndex].fullContent;
                                                 this.scrollToBottom();
-                                                this.highlightCode();
                                             }
                                         } else if (jsonData.type === 'end') {
                                             // 流结束
@@ -569,7 +583,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                         this.qaContent[aiMsgIndex].fullContent += data.content;
                                         this.qaContent[aiMsgIndex].content = this.qaContent[aiMsgIndex].fullContent;
                                         this.scrollToBottom();
-                                        this.highlightCode();
                                     }
                                 } else if (data.type === 'end') {
                                     // 流结束
@@ -580,6 +593,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                                     this.eventSource.close();
                                     this.eventSource = null;
+                                    this.chatLoading = false;
+                                    this.scrollToBottom();
+                                    this.highlightCode();
                                 }
                             } catch (e) {
                                 console.error('处理QA SSE消息时出错:', e);
@@ -590,16 +606,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             console.error('QA SSE连接错误:', error);
                             this.eventSource.close();
                             this.eventSource = null;
+                            this.chatLoading = false;
                         };
                     }
 
+                    if (this.activeContentType === 'learning') {
+                        this.chatLoading = false;
+                        this.scrollToBottom();
+                        this.highlightCode();
+                    }
                 } catch (error) {
                     console.error('发送请求失败:', error);
                     this.$message.error('发送请求失败，请稍后重试');
-                } finally {
                     this.chatLoading = false;
-                    this.scrollToBottom();
-                    this.highlightCode();
                 }
             },
 

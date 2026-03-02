@@ -1,6 +1,8 @@
 /* Markdown内容样式 */
 .markdown-content {
     overflow-wrap: break-word;
+    word-break: break-word; /* 强制英文单词/代码断行，防止撑破 */
+    max-width: 100%;
 }
 
 .markdown-content pre {

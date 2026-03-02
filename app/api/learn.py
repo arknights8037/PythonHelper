@@ -190,6 +190,12 @@ def stream_qa():
             "role": "system", 
             "content": system_message
         })
+        
+        # 将用户请求添加到问答历史
+        session_data['qa_messages'].append({
+            "role": "user",
+            "content": user_message
+        })
     else:
         # 将用户问题添加到问答历史
         user_message = question
@@ -202,16 +208,13 @@ def stream_qa():
         # 发送开始信号
         yield "data: {\"type\": \"start\"}\n\n"
         
-        # 构建系统提示词
-        system_message = f"你是一个Python学习平台的学习助手,善于为不同需求的人群讲解python知识。主题是关于: {', '.join(tags)}。"
-        if prompt:
-            system_message += f"\n以下是学习内容的大纲：\n{prompt}\n"
-            if not question or question == "开始问答":
-                system_message += "请基于此大纲生成问题。生成问题的要求是：1、每次只生成一个问题，等待用户回答后判题并且生成下一个问题。2、问题从记忆(2个，考察用户对基本语法或者方法的记忆)、理解(2个，考察用户对语法功能逻辑的理解)、分析评价(1个，考察用户对代码的组织和运行机制的分析能力)、应用(1个，考察代码能力)、综合(1个，考察对知识点的掌握程度)这个5个维度进行生成。3、生成的问题不要附带答案。"
-        
-        # 构建消息数组
-        messages = session_data['qa_messages'].copy()
-        messages.append({"role": "user", "content": user_message})
+        # 构建消息数组，避免无限增长，保留系统消息和最近8条对话
+        if len(session_data['qa_messages']) > 9:
+            system_msg = session_data['qa_messages'][0]
+            recent_msgs = session_data['qa_messages'][-8:]
+            messages = [system_msg] + recent_msgs
+        else:
+            messages = session_data['qa_messages'].copy()
         
         # 调用AI接口
         headers = {
@@ -325,13 +328,15 @@ def stream_chat():
         # 构建系统提示词
         system_message = f"你是一个Python学习平台的学习助手,善于为不同需求的人群讲解python知识。主题是关于: {', '.join(tags)}。请简洁清晰地回答用户问题。"
         
-        # 构建消息数组 - 直接使用会话中已保存的完整历史，包括系统消息
-        messages = session_data['qa_messages'].copy()
-        messages.append({"role": "user", "content": question})
+        # 这里为了避免无限增加完整历史导致token超限，我们对学习历史进行截断(保留最近10条)
+        recent_history = session_data['learning_messages'][-10:] if len(session_data['learning_messages']) > 10 else session_data['learning_messages']
+        
+        # 构建最终消息数组
+        messages = [{"role": "system", "content": system_message}] + recent_history
         
         # 调用AI接口
         headers = {
-            'Authorization': 'Bearer sk-12ecefa1b46f4b67ac446fa4baed7e7f',
+            'Authorization': 'Bearer sk-b8820bde77e34e119b76d3a7937c3fad',
             'Content-Type': 'application/json'
         }
         ai_data = {
@@ -472,10 +477,10 @@ def prompt_startlearn(tags):
         return error_message
 
 def clean_old_sessions():
-    """清理超过30分钟的旧会话"""
+    """清理超过2小时的旧会话"""
     current_time = time.time()
     expired_sessions = [sid for sid, data in sessions.items() 
-                       if current_time - data['created_at'] > 1800]
+                       if current_time - data['created_at'] > 7200]
     
     for sid in expired_sessions:
         sessions.pop(sid, None)
